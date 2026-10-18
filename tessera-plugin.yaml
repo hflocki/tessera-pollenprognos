@@ -1,0 +1,58 @@
+# Pollen forecast from Home Assistant's DWD Pollenflug integration: the allergens you choose, today and the coming days,
+# each as a coloured level from none to high. The sensors are chosen once in the plugin's details (one per allergen);
+# what a tile shows is set in its inspector. Every field is explained in docs/MANIFEST.md of tessera-plugins.
+id: pollen
+version: 0.1.0
+# 0.9: Tone::GOOD, ui::set_fill and one-line labels.
+api: "0.9"
+icon: flower
+maintainer: hflocki
+license: MIT
+stage: beta
+topics: [weather]
+requires:
+  esphome: 2026.6.2
+boards: any
+flash_kb: 14
+
+permissions:
+  # The screen reads each chosen sensor and its forecast attributes itself.
+  read_entities: ["{erle}", "{hasel}", "{esche}", "{birke}", "{graeser}", "{roggen}", "{beifuss}", "{ambrosia}"]
+
+inputs:
+  # One sensor of the DWD Pollenflug integration per allergen (sensor.pollenflug_<allergen>_<region>). Left empty, the
+  # allergen is not shown.
+  - { id: erle, kind: entity, domains: [sensor], scope: screen, label: input_erle, hint: input_hint }
+  - { id: hasel, kind: entity, domains: [sensor], scope: screen, label: input_hasel }
+  - { id: esche, kind: entity, domains: [sensor], scope: screen, label: input_esche }
+  - { id: birke, kind: entity, domains: [sensor], scope: screen, label: input_birke }
+  - { id: graeser, kind: entity, domains: [sensor], scope: screen, label: input_graeser }
+  - { id: roggen, kind: entity, domains: [sensor], scope: screen, label: input_roggen }
+  - { id: beifuss, kind: entity, domains: [sensor], scope: screen, label: input_beifuss }
+  - { id: ambrosia, kind: entity, domains: [sensor], scope: screen, label: input_ambrosia }
+
+tiles:
+  - id: forecast
+    name: tile_name
+    icon: flower
+    sizes: { min: 1x1, max: 6x4 }
+    # Up to eight rows of an icon, a name and three days of a dot and a word, a header of three, and a note.
+    memory: 4800
+    example: tile_example
+    options:
+      - id: days
+        kind: choice
+        default: "2"
+        label: days
+        hint: days_hint
+        choices: [{ value: "1", label: days_1 }, { value: "2", label: days_2 }, { value: "3", label: days_3 }]
+      - { id: show_empty, kind: toggle, default: false, label: show_empty, hint: show_empty_hint }
+      - { id: sort, kind: toggle, default: true, label: sort, hint: sort_hint }
+      - { id: show_erle, kind: toggle, default: true, label: allergen_erle, hint: show_hint }
+      - { id: show_hasel, kind: toggle, default: true, label: allergen_hasel }
+      - { id: show_esche, kind: toggle, default: true, label: allergen_esche }
+      - { id: show_birke, kind: toggle, default: true, label: allergen_birke }
+      - { id: show_graeser, kind: toggle, default: true, label: allergen_graeser }
+      - { id: show_roggen, kind: toggle, default: true, label: allergen_roggen }
+      - { id: show_beifuss, kind: toggle, default: true, label: allergen_beifuss }
+      - { id: show_ambrosia, kind: toggle, default: true, label: allergen_ambrosia }

@@ -1,0 +1,50 @@
+# What a screen gets when it takes this plugin. Tessera includes this file from the screen's <name>.plugins.yaml with
+# the sensors chosen in the plugin's details filled in, and adds the components folder beside it. An allergen without a
+# sensor keeps the default, which no entity has, and stays hidden.
+defaults:
+  ERLE: sensor.pollen_not_chosen
+  HASEL: sensor.pollen_not_chosen
+  ESCHE: sensor.pollen_not_chosen
+  BIRKE: sensor.pollen_not_chosen
+  GRAESER: sensor.pollen_not_chosen
+  ROGGEN: sensor.pollen_not_chosen
+  BEIFUSS: sensor.pollen_not_chosen
+  AMBROSIA: sensor.pollen_not_chosen
+
+# Each allergen's sensor read straight from Home Assistant: today's level is its state, tomorrow's and the day after's
+# are attributes. Values from 0 to 3 in steps of 0.5; unavailable or missing reads as nothing.
+sensor:
+  - { platform: homeassistant, id: pollen_erle_today, entity_id: "${ERLE}", internal: true }
+  - { platform: homeassistant, id: pollen_erle_tomorrow, entity_id: "${ERLE}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_erle_in_2_days, entity_id: "${ERLE}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_hasel_today, entity_id: "${HASEL}", internal: true }
+  - { platform: homeassistant, id: pollen_hasel_tomorrow, entity_id: "${HASEL}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_hasel_in_2_days, entity_id: "${HASEL}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_esche_today, entity_id: "${ESCHE}", internal: true }
+  - { platform: homeassistant, id: pollen_esche_tomorrow, entity_id: "${ESCHE}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_esche_in_2_days, entity_id: "${ESCHE}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_birke_today, entity_id: "${BIRKE}", internal: true }
+  - { platform: homeassistant, id: pollen_birke_tomorrow, entity_id: "${BIRKE}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_birke_in_2_days, entity_id: "${BIRKE}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_graeser_today, entity_id: "${GRAESER}", internal: true }
+  - { platform: homeassistant, id: pollen_graeser_tomorrow, entity_id: "${GRAESER}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_graeser_in_2_days, entity_id: "${GRAESER}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_roggen_today, entity_id: "${ROGGEN}", internal: true }
+  - { platform: homeassistant, id: pollen_roggen_tomorrow, entity_id: "${ROGGEN}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_roggen_in_2_days, entity_id: "${ROGGEN}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_beifuss_today, entity_id: "${BEIFUSS}", internal: true }
+  - { platform: homeassistant, id: pollen_beifuss_tomorrow, entity_id: "${BEIFUSS}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_beifuss_in_2_days, entity_id: "${BEIFUSS}", attribute: state_in_2_days, internal: true }
+  - { platform: homeassistant, id: pollen_ambrosia_today, entity_id: "${AMBROSIA}", internal: true }
+  - { platform: homeassistant, id: pollen_ambrosia_tomorrow, entity_id: "${AMBROSIA}", attribute: state_tomorrow, internal: true }
+  - { platform: homeassistant, id: pollen_ambrosia_in_2_days, entity_id: "${AMBROSIA}", attribute: state_in_2_days, internal: true }
+
+pollen:
+  erle: [pollen_erle_today, pollen_erle_tomorrow, pollen_erle_in_2_days]
+  hasel: [pollen_hasel_today, pollen_hasel_tomorrow, pollen_hasel_in_2_days]
+  esche: [pollen_esche_today, pollen_esche_tomorrow, pollen_esche_in_2_days]
+  birke: [pollen_birke_today, pollen_birke_tomorrow, pollen_birke_in_2_days]
+  graeser: [pollen_graeser_today, pollen_graeser_tomorrow, pollen_graeser_in_2_days]
+  roggen: [pollen_roggen_today, pollen_roggen_tomorrow, pollen_roggen_in_2_days]
+  beifuss: [pollen_beifuss_today, pollen_beifuss_tomorrow, pollen_beifuss_in_2_days]
+  ambrosia: [pollen_ambrosia_today, pollen_ambrosia_tomorrow, pollen_ambrosia_in_2_days]

@@ -1,0 +1,15 @@
+# What tools/preview.py shows (docs/PREVIEW.md). The bench builds with plugin.yaml's defaults, so every allergen reads
+# the same made-up sensor here; on a screen each has its own.
+tiles:
+  - tile: forecast
+    name: Pollen
+    options: { show_graeser: true }
+  - tile: forecast
+    name: Today only
+    options: { days: "1" }
+    sizes: [1x1, 2x1]
+
+states:
+  sensor.pollen_not_chosen:
+    state: "1.5"
+    attributes: { friendly_name: Pollenflug, state_tomorrow: 2, state_in_2_days: 0.5 }
