@@ -22,7 +22,11 @@
     "tomorrow": "Tomorrow",
     "in_2_days": "Day after",
     "choose": "Choose the sensors in the plugin's details",
-    "none": "No pollen"
+    "none": "No pollen",
+    "bar_alert": "{name}: {level}",
+    "in_bar": "In the top bar",
+    "alert_level": "From level",
+    "open_card": "All allergens"
   },
   "app": {
     "name": "Pollen forecast",
@@ -60,6 +64,13 @@
     "style_hint": "Circles as in the pollenprognos card, with the level in words under them or without, or bars, which take less room.",
     "style_circles": "Circles with words",
     "style_bars": "Bars",
-    "style_circles_plain": "Circles only"
+    "style_circles_plain": "Circles only",
+    "card_name": "All allergens",
+    "bar_alert_label": "Strong pollen",
+    "bar_example": "Birch: high",
+    "setting_in_bar": "In the top bar",
+    "setting_in_bar_hint": "Whether the top bar says when the pollen is strong.",
+    "setting_alert_level": "From level",
+    "setting_alert_level_hint": "1 very low, 2 low, 3 low to moderate, 4 moderate, 5 moderate to high, 6 high."
   }
 }

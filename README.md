@@ -27,6 +27,13 @@ pollen in the air the tile shows a green flower and "No pollen".
 - **Strongest first**: off keeps the order of the season (alder, hazel, ash, birch, grasses, rye, mugwort, ragweed).
 - **Alder** to **Ragweed**: which allergens this tile shows, so two tiles can show different ones.
 
+## Card and top bar
+
+- A tap on the tile opens a card with every allergen that has a sensor, today and the two days after.
+- The top bar item **Strong pollen** (Top bar, Add, From plugins) says "Birch: high" while the strongest allergen of
+  today reaches a level. On the screen (hold the top bar, Settings, Plugins, Pollen forecast) or in the plugin's
+  details: **In the top bar** on or off, and **From level** 1 (very low) to 6 (high), 5 at first.
+
 ## Good to know
 
 - The screen reads the chosen sensors itself, today's level from their state and the next days from their attributes

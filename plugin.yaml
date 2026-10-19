@@ -39,7 +39,33 @@ sensor:
   - { platform: homeassistant, id: pollen_ambrosia_tomorrow, entity_id: "${AMBROSIA}", attribute: state_tomorrow, internal: true }
   - { platform: homeassistant, id: pollen_ambrosia_in_2_days, entity_id: "${AMBROSIA}", attribute: state_in_2_days, internal: true }
 
+# Two settings, kept on the screen and shown in Home Assistant and on the screen's settings page: whether the top bar
+# says when the pollen is strong, and from which level (1 very low to 6 high).
+switch:
+  - platform: template
+    id: pollen_in_bar
+    name: "Pollen in top bar"
+    icon: mdi:flower
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+number:
+  - platform: template
+    id: pollen_alert_level
+    name: "Pollen alert level"
+    icon: mdi:flower
+    optimistic: true
+    min_value: 1
+    max_value: 6
+    step: 1
+    initial_value: 5
+    restore_value: true
+    entity_category: config
+
 pollen:
+  in_bar: pollen_in_bar
+  alert_level: pollen_alert_level
   erle: [pollen_erle_today, pollen_erle_tomorrow, pollen_erle_in_2_days]
   hasel: [pollen_hasel_today, pollen_hasel_tomorrow, pollen_hasel_in_2_days]
   esche: [pollen_esche_today, pollen_esche_tomorrow, pollen_esche_in_2_days]

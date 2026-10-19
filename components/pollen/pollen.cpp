@@ -501,7 +501,7 @@ class CirclesTile : public tessera::Tile {
   Row row_[MAX_ROWS];
 };
 
-// ---- The tile: bars or circles, as its inspector says ----
+// ---- The tile: bars or circles, as its inspector says; a tap opens the card ----
 
 class ForecastTile : public tessera::Tile {
  public:
@@ -509,6 +509,7 @@ class ForecastTile : public tessera::Tile {
   ~ForecastTile() override { delete inner_; }
 
   void create(const tessera::TileContext &c) override {
+    tile_ = c.tile;
     const char *style = c.options["style"] | "circles";
     if (strcmp(style, "bars") == 0) inner_ = new BarsTile(plugin_);
     else inner_ = new CirclesTile(plugin_);
@@ -517,14 +518,91 @@ class ForecastTile : public tessera::Tile {
   void on_state(JsonObjectConst data) override { inner_->on_state(data); }
   void on_tick(uint32_t epoch) override { inner_->on_tick(epoch); }
   void on_theme() override { inner_->on_theme(); }
+  void on_tap() override { tessera::open_card(plugin_->plugin_id(), "detail", "", tile_); }
 
  private:
   const Pollen *plugin_;
   tessera::Tile *inner_{};
+  int tile_ = -1;
 };
+
+// ---- The card: every allergen with a sensor, three days, as circles with words ----
+
+class DetailCard : public tessera::Card {
+ public:
+  explicit DetailCard(const Pollen *plugin) : circles_(plugin) {}
+
+  void open(const tessera::CardContext &c) override {
+    JsonDocument options;
+    options["days"] = "3";
+    options["show_empty"] = true;
+    options["sort"] = true;
+    options["style"] = "circles";
+    tessera::TileContext t{};
+    t.parent = c.parent;
+    t.width = c.width;
+    t.height = c.height;
+    t.columns = 4;
+    t.rows = 4;
+    t.name = "";
+    t.entity = "";
+    t.tile = -1;
+    t.options = options.as<JsonObjectConst>();
+    circles_.create(t);
+    circles_.on_tick(0);
+  }
+  void on_tick(uint32_t epoch) override { circles_.on_tick(epoch); }
+  void on_theme() override { circles_.on_theme(); }
+
+ private:
+  CirclesTile circles_;
+};
+
+// ---- The plugin ----
 
 void Pollen::setup() {
   add_tile("forecast", [this]() { return new ForecastTile(this); });
+  add_card("detail", [this]() { return new DetailCard(this); });
+  add_bar_item("alert", [this]() { return bar(); });
+}
+
+// "Birch: high" in the top bar while the strongest allergen of today reaches the level set on the screen.
+tessera::BarItem Pollen::bar() const {
+  tessera::BarItem item;
+  if (in_bar_ && !in_bar_->state) return item;
+  const int from = alert_level_ && !std::isnan(alert_level_->state) ? static_cast<int>(alert_level_->state) : 5;
+  int best = -1, step = 0;
+  for (int a = 0; a < ALLERGENS; ++a) {
+    const int s = step_of(level(a, 0));
+    if (s > step) {
+      step = s;
+      best = a;
+    }
+  }
+  if (best < 0 || step < std::max(1, from)) return item;
+  char key[8];
+  snprintf(key, sizeof key, "lvl%d", step);
+  item.shown = true;
+  item.icon = ICON_FLOWER;
+  item.tone = tone_of(step);
+  item.text = tessera::fill(tessera::fill(text("bar_alert"), "name", text(KEYS[best])).c_str(), "level", text(key));
+  return item;
+}
+
+bool Pollen::settings(tessera::SettingsPage &page) {
+  page.icon = "\U000F024A";
+  page.toggle(text("in_bar"), [this]() { return !in_bar_ || in_bar_->state; },
+              [this](bool on) { if (in_bar_) { if (on) in_bar_->turn_on(); else in_bar_->turn_off(); } });
+  page.number(text("alert_level"), 1, STEPS, 1, "",
+              [this]() { return alert_level_ && !std::isnan(alert_level_->state) ? static_cast<int>(alert_level_->state) : 5; },
+              [this](int value) {
+                if (!alert_level_) return;
+                auto call = alert_level_->make_call();
+                call.set_value(value);
+                call.perform();
+              });
+  page.card(text("open_card"), "\U000F024A", "detail");
+  return true;
 }
 
 }  // namespace esphome::pollen

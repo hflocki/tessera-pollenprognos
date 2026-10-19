@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+- A tap on the tile opens a card with every allergen and three days.
+- New top bar item **Strong pollen**: "Birch: high" while an allergen reaches the level you set. Two new settings on
+  the screen: whether the top bar says it, and from which level (5, moderate to high, at first).
+
 ## 0.4.0
 - New in the inspector: **Look**: circles with words, circles only, or bars. The bars of 0.2 are back as a choice
   and take less room. **Level in words** is now part of it.

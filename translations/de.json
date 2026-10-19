@@ -22,7 +22,11 @@
     "tomorrow": "Morgen",
     "in_2_days": "Übermorgen",
     "choose": "Sensoren in den Plugin-Details wählen",
-    "none": "Keine Pollen"
+    "none": "Keine Pollen",
+    "bar_alert": "{name}: {level}",
+    "in_bar": "In der oberen Leiste",
+    "alert_level": "Ab Stufe",
+    "open_card": "Alle Allergene"
   },
   "app": {
     "name": "Pollenflug",
@@ -60,6 +64,13 @@
     "style_hint": "Kreise wie in der pollenprognos-card, mit der Stufe in Worten darunter oder ohne, oder Balken, die weniger Platz brauchen.",
     "style_circles": "Kreise mit Text",
     "style_bars": "Balken",
-    "style_circles_plain": "Nur Kreise"
+    "style_circles_plain": "Nur Kreise",
+    "card_name": "Alle Allergene",
+    "bar_alert_label": "Starker Pollenflug",
+    "bar_example": "Birke: hoch",
+    "setting_in_bar": "In der oberen Leiste",
+    "setting_in_bar_hint": "Ob die obere Leiste starken Pollenflug anzeigt.",
+    "setting_alert_level": "Ab Stufe",
+    "setting_alert_level_hint": "1 sehr gering, 2 gering, 3 gering–mittel, 4 mittel, 5 mittel–hoch, 6 hoch."
   }
 }
