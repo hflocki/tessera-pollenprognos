@@ -1,11 +1,11 @@
 # Pollen forecast
 
 The pollen levels of the allergens you choose, from the DWD Pollenflug integration in Home Assistant: a row per
-allergen with its icon in the colour of today's level and its name, and for today and the coming days a bar that fills
-from none to high in green, amber or red, with the level in words. The strongest allergens first. It is the idea of the
+allergen with its name, and for today and the coming days a circle whose ring fills from none to high in green,
+amber or red, the allergen's icon in its middle and the level in words under it. The strongest allergens first. It is the idea of the
 Lovelace [pollenprognos-card](https://github.com/krissen/pollenprognos-card), drawn on a Tessera screen.
 
-On a narrow tile the bars sit under each name, on a wide one beside it; a taller tile shows more allergens. With no
+The circles grow with the tile: three allergens fill a tile two cells high, a taller one shows more. With no
 pollen in the air the tile shows a green flower and "No pollen".
 
 ## Set up
@@ -20,6 +20,8 @@ pollen in the air the tile shows a green flower and "No pollen".
 
 ## Options of a tile
 
+- **Look**: circles with the level in words under them (the default), circles only, or bars that fill from none to
+  high, which take less room on a small tile.
 - **Days**: today alone, today and tomorrow, or three days.
 - **Show allergens without pollen**: off leaves out an allergen with no pollen on every day shown.
 - **Strongest first**: off keeps the order of the season (alder, hazel, ash, birch, grasses, rye, mugwort, ragweed).

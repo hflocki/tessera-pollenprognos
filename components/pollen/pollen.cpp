@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 
 namespace esphome::pollen {
@@ -38,15 +39,17 @@ static void place(lv_obj_t *obj, int x, int y, int w, int h) {
   lv_obj_set_pos(obj, x, y);
 }
 
-// ---- The tile ----
+
+// ---- Bars: a bar per day that fills from none to high ----
+
 
 // A block per allergen: its icon in the colour of today's level and its name, and for each day a bar that fills from
 // none to high in green, amber or red, with the level in words. On a narrow tile the bars sit under the name, on a wide
 // one beside it. The blocks spread over the tile's height, the strongest first; with nothing to show the tile says so
 // with a large flower.
-class ForecastTile : public tessera::Tile {
+class BarsTile : public tessera::Tile {
  public:
-  explicit ForecastTile(const Pollen *plugin) : plugin_(plugin) {}
+  explicit BarsTile(const Pollen *plugin) : plugin_(plugin) {}
 
   void create(const tessera::TileContext &c) override {
     width_ = c.width;
@@ -253,6 +256,271 @@ class ForecastTile : public tessera::Tile {
   bool chosen_[ALLERGENS]{};
   lv_obj_t *head_[DAYS]{}, *big_{}, *note_{};
   Row row_[MAX_ROWS];
+};
+
+// ---- Circles: a ring per day that fills from none to high, as in the pollenprognos card ----
+
+
+// A row per allergen: its name, and for each day a circle whose ring fills from none to high in green, amber or red,
+// the allergen's icon in the middle in the same colour, and the level in words under it where there is room. The
+// circles grow with the room: three allergens fill a tile two cells high. The strongest first; with nothing to show
+// the tile says so with a large flower.
+class CirclesTile : public tessera::Tile {
+ public:
+  explicit CirclesTile(const Pollen *plugin) : plugin_(plugin) {}
+
+  void create(const tessera::TileContext &c) override {
+    width_ = c.width;
+    height_ = c.height;
+    days_ = std::max(1, std::min(DAYS, atoi(c.options["days"] | "2")));
+    show_empty_ = c.options["show_empty"] | false;
+    sort_ = c.options["sort"] | true;
+    show_words_ = strcmp(c.options["style"] | "circles", "circles_plain") != 0;
+    for (int a = 0; a < ALLERGENS; ++a) {
+      char key[24];
+      snprintf(key, sizeof key, "show_%s", KEYS[a]);
+      chosen_[a] = c.options[key] | true;
+    }
+
+    name_h_ = ui::line_height(Font::BODY_LARGE);
+    body_h_ = ui::line_height(Font::BODY);
+    gap_ = ui::px(ui::large() ? 10 : 6);
+    min_d_ = ui::mm(8);
+    // The name beside the circles, in a column of the longest name (two fifths of the tile at most), when every day's
+    // cell keeps room for its circle and its words; else the name above its circles, which then share the whole width.
+    // A day whose circle would be smaller than 8 mm is left out, the last day first.
+    int longest = 0;
+    for (const char *key : KEYS) longest = std::max(longest, ui::text_width(plugin_->text(key), Font::BODY_LARGE));
+    for (int s = 0; s <= STEPS; ++s) word_w_ = std::max(word_w_, ui::text_width(level_text(s), Font::BODY));
+    const int need = std::max(min_d_ + ui::px(4), show_words_ ? word_w_ + ui::px(4) : 0);
+    name_w_ = std::min(longest + ui::px(10), width_ * 2 / 5);
+    side_ = (width_ - name_w_ - (days_ - 1) * gap_) / days_ >= need;
+    if (!side_) name_w_ = 0;
+    for (;;) {
+      cell_w_ = (width_ - name_w_ - (days_ - 1) * gap_) / days_;
+      if (cell_w_ >= min_d_ + ui::px(4) || days_ == 1) break;
+      --days_;
+    }
+    cell_w_ = std::max(1, cell_w_);
+    header_ = days_ > 1;
+    head_top_ = header_ ? body_h_ + ui::px(4) : 0;
+    rows_ = std::max(1, std::min(MAX_ROWS, (height_ - head_top_ + gap_) / (min_d_ + (side_ ? 0 : name_h_) + gap_)));
+
+    if (header_)
+      for (int d = 0; d < days_; ++d) {
+        head_[d] = ui::label(c.parent, Font::BODY, theme::MUTED);
+        lv_obj_set_style_text_align(head_[d], LV_TEXT_ALIGN_CENTER, 0);
+      }
+    for (int r = 0; r < rows_; ++r) {
+      Row &row = row_[r];
+      row.name = ui::label(c.parent, Font::BODY_LARGE, theme::INK);
+      for (int d = 0; d < days_; ++d) {
+        Cell &cell = row.cell[d];
+        cell.ring = make_ring(c.parent);
+        cell.icon = ui::label(c.parent, Font::ICON_SMALL, theme::MUTED);
+        lv_obj_set_style_text_align(cell.icon, LV_TEXT_ALIGN_CENTER, 0);
+        cell.word = ui::label(c.parent, Font::BODY, theme::MUTED);
+        lv_obj_set_style_text_align(cell.word, LV_TEXT_ALIGN_CENTER, 0);
+      }
+    }
+    // What the tile shows with nothing to show: a large flower and a word under it.
+    big_ = ui::label(c.parent, Font::ICON, theme::MUTED);
+    lv_obj_set_style_text_align(big_, LV_TEXT_ALIGN_CENTER, 0);
+    note_ = ui::label(c.parent, Font::BODY_LARGE, theme::MUTED);
+    lv_obj_set_style_text_align(note_, LV_TEXT_ALIGN_CENTER, 0);
+    const int ih = ui::line_height(Font::ICON), nh = ui::line_height(Font::BODY_LARGE);
+    const int y = std::max(0, (height_ - ih - nh) / 2);
+    place(big_, 0, y, width_, ih);
+    place(note_, 0, y + ih, width_, nh);
+  }
+
+  void on_tick(uint32_t) override {
+    // The allergens to show: chosen in the inspector, with a sensor, and (unless asked) with pollen on a shown day.
+    Item items[ALLERGENS];
+    int count = 0, with_sensor = 0;
+    for (int a = 0; a < ALLERGENS; ++a) {
+      if (!chosen_[a]) continue;
+      Item it{a, {-1, -1, -1}, -1};
+      for (int d = 0; d < days_; ++d) {
+        it.step[d] = step_of(plugin_->level(a, d));
+        it.most = std::max(it.most, it.step[d]);
+      }
+      if (it.most < 0) continue;  // no sensor, or it has no value
+      ++with_sensor;
+      if (!show_empty_ && it.most <= 0) continue;
+      items[count++] = it;
+    }
+    if (sort_)
+      std::stable_sort(items, items + count, [](const Item &x, const Item &y) {
+        return x.step[0] != y.step[0] ? x.step[0] > y.step[0] : x.most > y.most;
+      });
+
+    const char *why = with_sensor == 0 ? "choose" : count == 0 ? "none" : nullptr;
+    ui::set_text(big_, why ? ui::icon(ICON_FLOWER) : "");
+    ui::set_tone(big_, why && *why == 'n' ? Tone::GOOD : Tone::NORMAL, theme::MUTED);
+    ui::set_text(note_, why ? plugin_->text(why) : "");
+
+    // As large as the room allows for the rows there are: the circle fits its cell and its share of the height, the
+    // words under it only while the circle keeps at least 8 mm.
+    const int shown = why ? 0 : std::min(count, rows_);
+    const int room = height_ - head_top_;
+    const int name_above = side_ ? 0 : name_h_;
+    int share = shown ? (room - (shown - 1) * gap_) / shown - name_above : 0;
+    bool words = show_words_ && share - body_h_ >= min_d_ && cell_w_ >= word_w_;
+    int dia = std::min(std::min(cell_w_ - ui::px(4), ui::mm(18)), share - (words ? body_h_ + ui::px(2) : 0));
+    dia = std::max(min_d_, dia);
+    const int row_h = name_above + dia + (words ? body_h_ + ui::px(2) : 0);
+    const int used = shown * row_h + std::max(0, shown - 1) * gap_;
+    const int spare = std::max(0, room - used);
+    // Rows a little apart when there is much room, and the block in the middle of what is left.
+    const int extra = shown > 1 ? std::min(spare / (shown + 1), gap_ * 2) : 0;
+    const int y0 = head_top_ + std::max(0, (spare - extra * (shown - 1)) / 2);
+
+    for (int d = 0; d < days_; ++d)
+      if (head_[d]) {
+        ui::set_text(head_[d], shown ? plugin_->text(DAY_KEYS[d]) : "");
+        place(head_[d], cell_x(d), std::max(0, y0 - head_top_), cell_w_, body_h_);
+      }
+    const bool big_icon = dia >= ui::line_height(Font::ICON) * 3 / 2;
+    for (int r = 0; r < rows_; ++r) {
+      if (r < shown) paint(row_[r], items[r], y0 + r * (row_h + gap_ + extra), dia, words, big_icon);
+      else clear(row_[r]);
+    }
+  }
+
+  void on_theme() override {
+    for (int d = 0; d < days_; ++d)
+      if (head_[d]) ui::set_color(head_[d], theme::MUTED);
+    ui::set_color(note_, theme::MUTED);
+    // The rings and icons take their colours on every tick.
+  }
+
+ private:
+  struct Item {
+    int allergen;
+    int step[DAYS];
+    int most;
+  };
+  struct Cell {
+    lv_obj_t *ring{}, *icon{}, *word{};
+  };
+  struct Row {
+    lv_obj_t *name{};
+    Cell cell[DAYS];
+  };
+
+  int cell_x(int d) const { return name_w_ + d * (cell_w_ + gap_); }
+
+  std::string level_text(int step) const {
+    char key[8];
+    snprintf(key, sizeof key, "lvl%d", std::max(0, step));
+    return plugin_->text(key);
+  }
+
+  // A ring that fills clockwise from the top: an arc where the firmware has them, else a round outline.
+  static lv_obj_t *make_ring(lv_obj_t *parent) {
+#if LV_USE_ARC
+    lv_obj_t *arc = lv_arc_create(parent);
+    lv_obj_remove_style_all(arc);
+    lv_obj_remove_flag(arc, LV_OBJ_FLAG_CLICKABLE);
+    lv_arc_set_rotation(arc, 270);
+    lv_arc_set_bg_angles(arc, 0, 360);
+    lv_arc_set_range(arc, 0, STEPS);
+    lv_arc_set_value(arc, 0);
+    lv_obj_set_style_arc_rounded(arc, true, LV_PART_MAIN);
+    lv_obj_set_style_arc_rounded(arc, true, LV_PART_INDICATOR);
+    return arc;
+#else
+    lv_obj_t *ring = ui::block(parent, theme::CARD);
+    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_opa(ring, LV_OPA_TRANSP, 0);
+    return ring;
+#endif
+  }
+
+  void paint_ring(lv_obj_t *ring, int dia, int step) {
+    const int w = std::max(ui::px(4), dia / 9);
+    const Tone tone = tone_of(step);
+#if LV_USE_ARC
+    lv_obj_set_style_arc_width(ring, w, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(ring, w, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(ring, ui::color(theme::TRACK), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(ring, ui::tone_color(tone, theme::ACCENT), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_opa(ring, step > 0 ? LV_OPA_COVER : LV_OPA_TRANSP, LV_PART_INDICATOR);
+    lv_arc_set_value(ring, std::max(0, step));
+#else
+    lv_obj_set_style_border_width(ring, w, 0);
+    lv_obj_set_style_border_color(ring, step > 0 ? ui::tone_color(tone, theme::ACCENT) : ui::color(theme::TRACK), 0);
+#endif
+  }
+
+  void paint(Row &row, const Item &it, int y, int dia, bool words, bool big_icon) {
+    ui::set_text(row.name, plugin_->text(KEYS[it.allergen]));
+    ui::set_color(row.name, theme::INK);
+    if (side_) {
+      place(row.name, 0, y + dia / 2 - name_h_ / 2, name_w_ - ui::px(6), name_h_);
+    } else {
+      place(row.name, 0, y, width_, name_h_);
+      y += name_h_;
+    }
+    const int icon_y = y + dia / 2;
+    const Font icon_font = big_icon ? Font::ICON : Font::ICON_SMALL;
+    const int ih = ui::line_height(icon_font);
+    for (int d = 0; d < days_; ++d) {
+      Cell &cell = row.cell[d];
+      const int s = it.step[d];
+      const int x = cell_x(d) + (cell_w_ - dia) / 2;
+      lv_obj_set_style_opa(cell.ring, LV_OPA_COVER, 0);
+      place(cell.ring, x, y, dia, dia);
+      paint_ring(cell.ring, dia, s);
+      ui::set_font(cell.icon, icon_font);
+      ui::set_text(cell.icon, ui::icon(ICONS[it.allergen]));
+      ui::set_tone(cell.icon, tone_of(s), theme::MUTED);
+      place(cell.icon, x, icon_y - ih / 2, dia, ih);
+      ui::set_text(cell.word, words ? (s < 0 ? std::string("-") : level_text(s)) : "");
+      ui::set_tone(cell.word, tone_of(s), theme::MUTED);
+      place(cell.word, cell_x(d), y + dia + ui::px(2), cell_w_, body_h_);
+    }
+  }
+
+  void clear(Row &row) {
+    ui::set_text(row.name, "");
+    for (int d = 0; d < days_; ++d) {
+      lv_obj_set_style_opa(row.cell[d].ring, LV_OPA_TRANSP, 0);
+      ui::set_text(row.cell[d].icon, "");
+      ui::set_text(row.cell[d].word, "");
+    }
+  }
+
+  const Pollen *plugin_;
+  int width_ = 0, height_ = 0, days_ = 2, rows_ = 0;
+  int name_h_ = 0, body_h_ = 0, gap_ = 0, min_d_ = 0, name_w_ = 0, cell_w_ = 0, head_top_ = 0, word_w_ = 0;
+  bool show_empty_ = false, sort_ = true, show_words_ = true, header_ = false, side_ = true;
+  bool chosen_[ALLERGENS]{};
+  lv_obj_t *head_[DAYS]{}, *big_{}, *note_{};
+  Row row_[MAX_ROWS];
+};
+
+// ---- The tile: bars or circles, as its inspector says ----
+
+class ForecastTile : public tessera::Tile {
+ public:
+  explicit ForecastTile(const Pollen *plugin) : plugin_(plugin) {}
+  ~ForecastTile() override { delete inner_; }
+
+  void create(const tessera::TileContext &c) override {
+    const char *style = c.options["style"] | "circles";
+    if (strcmp(style, "bars") == 0) inner_ = new BarsTile(plugin_);
+    else inner_ = new CirclesTile(plugin_);
+    inner_->create(c);
+  }
+  void on_state(JsonObjectConst data) override { inner_->on_state(data); }
+  void on_tick(uint32_t epoch) override { inner_->on_tick(epoch); }
+  void on_theme() override { inner_->on_theme(); }
+
+ private:
+  const Pollen *plugin_;
+  tessera::Tile *inner_{};
 };
 
 void Pollen::setup() {

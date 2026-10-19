@@ -55,6 +55,11 @@
     "input_beifuss": "Mugwort sensor",
     "allergen_beifuss": "Mugwort",
     "input_ambrosia": "Ragweed sensor",
-    "allergen_ambrosia": "Ragweed"
+    "allergen_ambrosia": "Ragweed",
+    "style": "Look",
+    "style_hint": "Circles as in the pollenprognos card, with the level in words under them or without, or bars, which take less room.",
+    "style_circles": "Circles with words",
+    "style_bars": "Bars",
+    "style_circles_plain": "Circles only"
   }
 }

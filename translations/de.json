@@ -55,6 +55,11 @@
     "input_beifuss": "Beifuß-Sensor",
     "allergen_beifuss": "Beifuß",
     "input_ambrosia": "Ambrosia-Sensor",
-    "allergen_ambrosia": "Ambrosia"
+    "allergen_ambrosia": "Ambrosia",
+    "style": "Darstellung",
+    "style_hint": "Kreise wie in der pollenprognos-card, mit der Stufe in Worten darunter oder ohne, oder Balken, die weniger Platz brauchen.",
+    "style_circles": "Kreise mit Text",
+    "style_bars": "Balken",
+    "style_circles_plain": "Nur Kreise"
   }
 }
