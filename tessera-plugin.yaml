@@ -2,7 +2,7 @@
 # each as a coloured level from none to high. The sensors are chosen once in the plugin's details (one per allergen);
 # what a tile shows is set in its inspector. Every field is explained in docs/MANIFEST.md of tessera-plugins.
 id: pollen
-version: 0.1.0
+version: 0.2.0
 # 0.9: Tone::GOOD, ui::set_fill and one-line labels.
 api: "0.9"
 icon: flower
@@ -36,8 +36,9 @@ tiles:
     name: tile_name
     icon: flower
     sizes: { min: 1x1, max: 6x4 }
-    # Up to eight rows of an icon, a name and three days of a dot and a word, a header of three, and a note.
-    memory: 4800
+    # Up to eight blocks of an icon, a name, a word and three days of a word and a bar, a header of three, a flower
+    # and a note.
+    memory: 9800
     example: tile_example
     options:
       - id: days
