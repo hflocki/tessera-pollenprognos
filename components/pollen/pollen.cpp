@@ -509,7 +509,8 @@ class CirclesTile : public tessera::Tile {
       const int x = cell_x(d) + (cell_w_ - dia) / 2;
       show(cell.ring, true);
       show(cell.icon, true);
-      show(cell.word, true);
+      // The word under the circle only where it shows: an empty one below the last row would lie under the edge.
+      show(cell.word, words);
       place(cell.ring, x, y, dia, dia);
       paint_ring(cell.ring, dia, s);
       ui::set_font(cell.icon, icon_font);
@@ -518,7 +519,7 @@ class CirclesTile : public tessera::Tile {
       place(cell.icon, x, icon_y - ih / 2, dia, ih);
       ui::set_text(cell.word, words ? (s < 0 ? std::string("-") : level_text(s)) : "");
       set_readable(cell.word, tone_of(s), theme::MUTED);
-      place(cell.word, cell_x(d), y + dia + ui::px(2), cell_w_, body_h_);
+      if (words) place(cell.word, cell_x(d), y + dia + ui::px(2), cell_w_, body_h_);
     }
   }
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.2
+- Without words under the circles, no empty word lies under the last row.
+
 ## 1.2.1
 - Only as many rows as fit, and a single row's circle never taller than the tile.
 
