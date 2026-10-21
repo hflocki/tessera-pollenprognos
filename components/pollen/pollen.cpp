@@ -392,13 +392,20 @@ class CirclesTile : public tessera::Tile {
 
     // As large as the room allows for the rows there are: the circle fits its cell and its share of the height, the
     // words under it only while the circle keeps at least 8 mm.
-    const int shown = why ? 0 : std::min(count, rows_);
+    int shown = why ? 0 : std::min(count, rows_);
     const int room = height_ - head_top_;
     const int name_above = side_ ? 0 : name_h_;
+    // Only as many rows as fit with the smallest circle: the rest would lie under the tile's edge.
+    while (shown > 1 && shown * (name_above + min_d_) + (shown - 1) * gap_ > room) --shown;
     int share = shown ? (room - (shown - 1) * gap_) / shown - name_above : 0;
     bool words = show_words_ && share - body_h_ >= min_d_ && cell_w_ >= word_w_;
     int dia = std::min(std::min(cell_w_ - ui::px(4), ui::mm(18)), share - (words ? body_h_ + ui::px(2) : 0));
     dia = std::max(min_d_, dia);
+    // A single row on a short tile: the circle as high as the room, never over its edge.
+    if (shown == 1 && name_above + dia + (words ? body_h_ + ui::px(2) : 0) > room) {
+      words = false;
+      dia = std::max(ui::px(12), std::min(dia, room - name_above));
+    }
     const int row_h = name_above + dia + (words ? body_h_ + ui::px(2) : 0);
     const int used = shown * row_h + std::max(0, shown - 1) * gap_;
     const int spare = std::max(0, room - used);

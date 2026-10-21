@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.1
+- Only as many rows as fit, and a single row's circle never taller than the tile.
+
 ## 1.2.0
 - Amber and yellow words and icons take the ink on the light look, where they were too faint to read; the dark look keeps its colours.
 - Rows not shown are hidden, so nothing lies outside a tall tile.
