@@ -1,5 +1,6 @@
 #include "pollen.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -10,6 +11,35 @@ namespace esphome::pollen {
 using tessera::Font;
 using tessera::Tone;
 namespace ui = tessera::ui;
+
+// Shown or hidden, only when it differs: a hidden part is not drawn, and a part of a row not shown never lies outside.
+static void show(lv_obj_t *obj, bool on) {
+  if (lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN) == on) {
+    if (on) lv_obj_remove_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+  }
+}
+
+// ---- Readable colours ---------------------------------------------------------------------------------------------
+
+// A colour's luminance and the WCAG contrast of two: amber or yellow words on the light look's white card fall under
+// what a person reads, so there they take the ink instead; on the dark look they keep their colour.
+static float luminance(lv_color_t c) {
+  auto channel = [](uint8_t v) {
+    const float s = v / 255.0f;
+    return s <= 0.03928f ? s / 12.92f : std::pow((s + 0.055f) / 1.055f, 2.4f);
+  };
+  return 0.2126f * channel(c.red) + 0.7152f * channel(c.green) + 0.0722f * channel(c.blue);
+}
+static bool reads_on_card(lv_color_t c) {
+  const float a = luminance(c), b = luminance(ui::color(theme::CARD));
+  return (std::max(a, b) + 0.05f) / (std::min(a, b) + 0.05f) >= 3.0f;
+}
+// A label (words or an icon) in a tone's or a role's colour where that reads on the card, else in the ink.
+static void set_readable(lv_obj_t *label, tessera::Tone tone, theme::Role role) {
+  if (reads_on_card(ui::tone_color(tone, role))) ui::set_tone(label, tone, role);
+  else ui::set_color(label, theme::INK);
+}
 
 // The allergens' keys: option show_<key>, screen texts <key> (the name) and the order of the sensors.
 static const char *const KEYS[ALLERGENS] = {"erle", "hasel", "esche", "birke", "graeser", "roggen", "beifuss", "ambrosia"};
@@ -195,7 +225,7 @@ class BarsTile : public tessera::Tile {
   void paint(Row &row, const Item &it, int y) {
     const Tone tone = tone_of(it.step[0]);
     ui::set_text(row.icon, ui::icon(ICONS[it.allergen]));
-    ui::set_tone(row.icon, tone, theme::MUTED);
+    set_readable(row.icon, tone, theme::MUTED);
     ui::set_text(row.name, plugin_->text(KEYS[it.allergen]));
     ui::set_color(row.name, theme::INK);
     if (side_) {
@@ -209,7 +239,7 @@ class BarsTile : public tessera::Tile {
       place(row.name, icon_w_, y, width_ - icon_w_ - ww - ui::px(6), title_h_);
       place(row.today, width_ - ww, y + (title_h_ - body_h_) / 2, ww, body_h_);
       ui::set_text(row.today, level_text(it.step[0]));
-      ui::set_tone(row.today, tone, theme::MUTED);
+      set_readable(row.today, tone, theme::MUTED);
     }
     for (int d = 0; d < days_; ++d) {
       const int x = cell_x_ + d * (cell_w_ + col_gap_);
@@ -218,7 +248,7 @@ class BarsTile : public tessera::Tile {
         const int top = y + (row_h_ - body_h_ - ui::px(3) - bar_h_) / 2;
         place(row.word[d], x, top, cell_w_, body_h_);
         ui::set_text(row.word[d], it.step[d] < 0 ? "-" : level_text(it.step[d]));
-        ui::set_tone(row.word[d], tone_of(it.step[d]), it.step[d] > 0 ? theme::INK : theme::MUTED);
+        set_readable(row.word[d], tone_of(it.step[d]), it.step[d] > 0 ? theme::INK : theme::MUTED);
         bar_y = top + body_h_ + ui::px(3);
       } else {
         bar_y = y + title_h_ + ui::px(4);
@@ -229,10 +259,10 @@ class BarsTile : public tessera::Tile {
 
   // A bar from none to high: the track, and in it the part up to the level in the level's colour.
   void bar(lv_obj_t *track, lv_obj_t *fill, int x, int y, int step) {
-    lv_obj_set_style_opa(track, LV_OPA_COVER, 0);
+    show(track, true);
     place(track, x, y, cell_w_, bar_h_);
     const bool some = step > 0;
-    lv_obj_set_style_opa(fill, some ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+    show(fill, some);
     place(fill, 0, 0, some ? std::max(bar_h_, cell_w_ * step / STEPS) : 1, bar_h_);
     ui::set_fill(fill, tone_of(step), theme::ACCENT);
   }
@@ -243,8 +273,8 @@ class BarsTile : public tessera::Tile {
     if (row.today) ui::set_text(row.today, "");
     for (int d = 0; d < days_; ++d) {
       if (row.word[d]) ui::set_text(row.word[d], "");
-      lv_obj_set_style_opa(row.track[d], LV_OPA_TRANSP, 0);
-      lv_obj_set_style_opa(row.fill[d], LV_OPA_TRANSP, 0);
+      show(row.track[d], false);
+      show(row.fill[d], false);
     }
   }
 
@@ -470,15 +500,17 @@ class CirclesTile : public tessera::Tile {
       Cell &cell = row.cell[d];
       const int s = it.step[d];
       const int x = cell_x(d) + (cell_w_ - dia) / 2;
-      lv_obj_set_style_opa(cell.ring, LV_OPA_COVER, 0);
+      show(cell.ring, true);
+      show(cell.icon, true);
+      show(cell.word, true);
       place(cell.ring, x, y, dia, dia);
       paint_ring(cell.ring, dia, s);
       ui::set_font(cell.icon, icon_font);
       ui::set_text(cell.icon, ui::icon(ICONS[it.allergen]));
-      ui::set_tone(cell.icon, tone_of(s), theme::MUTED);
+      set_readable(cell.icon, tone_of(s), theme::MUTED);
       place(cell.icon, x, icon_y - ih / 2, dia, ih);
       ui::set_text(cell.word, words ? (s < 0 ? std::string("-") : level_text(s)) : "");
-      ui::set_tone(cell.word, tone_of(s), theme::MUTED);
+      set_readable(cell.word, tone_of(s), theme::MUTED);
       place(cell.word, cell_x(d), y + dia + ui::px(2), cell_w_, body_h_);
     }
   }
@@ -486,9 +518,9 @@ class CirclesTile : public tessera::Tile {
   void clear(Row &row) {
     ui::set_text(row.name, "");
     for (int d = 0; d < days_; ++d) {
-      lv_obj_set_style_opa(row.cell[d].ring, LV_OPA_TRANSP, 0);
-      ui::set_text(row.cell[d].icon, "");
-      ui::set_text(row.cell[d].word, "");
+      show(row.cell[d].ring, false);
+      show(row.cell[d].icon, false);
+      show(row.cell[d].word, false);
     }
   }
 

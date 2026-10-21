@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+- Amber and yellow words and icons take the ink on the light look, where they were too faint to read; the dark look keeps its colours.
+- Rows not shown are hidden, so nothing lies outside a tall tile.
+
 ## 1.1.0
 - A tap on the tile opens a card with every allergen and three days.
 - New top bar item **Strong pollen**: "Birch: high" while an allergen reaches the level you set. Two new settings on
